@@ -1,10 +1,13 @@
 package main
 
-import "log"
+import (
+	"log"
+	"socialApp/internal/env"
+)
 
 func main() {
 	cfg := config{
-		addr: ":8080",
+		addr: env.GetEnv("ADDR", ":8080"),
 	}
 	app := &application{
 		config: cfg,
