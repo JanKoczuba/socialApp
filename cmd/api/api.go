@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"socialApp/docs"
+	"socialApp/internal/mailer"
 	"socialApp/internal/store"
 	"time"
 )
@@ -16,13 +17,26 @@ type application struct {
 	config config
 	store  store.Storage
 	logger *zap.SugaredLogger
+	mailer mailer.Client
 }
 
 type config struct {
-	addr   string
-	db     dbConfig
-	env    string
-	apiURL string
+	addr        string
+	db          dbConfig
+	env         string
+	apiURL      string
+	mail        mailConfig
+	frontendURL string
+}
+
+type mailConfig struct {
+	sendGrid  sendGridConfig
+	fromEmail string
+	exp       time.Duration
+}
+
+type sendGridConfig struct {
+	apiKey string
 }
 
 type dbConfig struct {
@@ -63,9 +77,10 @@ func (app *application) mount() http.Handler {
 					r.Post("/", app.createCommentHandler)
 				})
 			})
-			r.Route("/user", func(r chi.Router) {
+			r.Route("/users", func(r chi.Router) {
+				r.Put("/activate/{token}", app.activateUserHandler)
+
 				r.Route("/{userID}", func(r chi.Router) {
-					r.Use(app.userContextMiddleware)
 					r.Get("/", app.getUserHandler)
 					r.Put("/follow", app.followUserHandler)
 					r.Put("/unfollow", app.unfollowUserHandler)
@@ -75,7 +90,9 @@ func (app *application) mount() http.Handler {
 				})
 			})
 		})
-
+		r.Route("/authentication", func(r chi.Router) {
+			r.Post("/user", app.registerUserHandler)
+		})
 	})
 	return r
 }
