@@ -45,11 +45,13 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	user := getUserFromContext(r)
+
 	post := &store.Post{
 		Title:   payload.Title,
 		Content: payload.Content,
 		Tags:    payload.Tags,
-		UserID:  1,
+		UserID:  user.ID,
 	}
 	ctx := r.Context()
 
@@ -204,10 +206,11 @@ func (app *application) createCommentHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	user := getUserFromContext(r)
+
 	comment := &store.Comment{
-		PostID: post.ID,
-		//TODO change userid
-		UserID:  204,
+		PostID:  post.ID,
+		UserID:  user.ID,
 		Content: payload.Content,
 	}
 	if err := app.store.Comments.Create(r.Context(), comment); err != nil {
