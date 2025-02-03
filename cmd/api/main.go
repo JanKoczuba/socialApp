@@ -1,12 +1,14 @@
 package main
 
 import (
+	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 	"socialApp/internal/auth"
 	"socialApp/internal/db"
 	"socialApp/internal/env"
 	"socialApp/internal/mailer"
 	"socialApp/internal/store"
+	"socialApp/internal/store/cache"
 	"time"
 )
 
@@ -39,6 +41,12 @@ func main() {
 			maxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),
 			maxIdleConns: env.GetInt("DB_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
+		},
+		redisCfg: redisConfig{
+			addr:    env.GetString("REDIS_ADDR", "localhost:6379"),
+			pw:      env.GetString("REDIS_PW", ""),
+			db:      env.GetInt("REDIS_DB", 0),
+			enabled: env.GetBool("REDIS_ENABLED", false),
 		},
 		env: env.GetString("ENV", "development"),
 		mail: mailConfig{
@@ -77,7 +85,17 @@ func main() {
 	defer db.Close()
 	logger.Info("Database connection established")
 
+	// Cache
+	var rdb *redis.Client
+	if cfg.redisCfg.enabled {
+		rdb = cache.NewRedisClient(cfg.redisCfg.addr, cfg.redisCfg.pw, cfg.redisCfg.db)
+		logger.Info("redis cache connection established")
+
+		defer rdb.Close()
+	}
+
 	storage := store.NewStorage(db)
+	cacheStorage := cache.NewRedisStorage(rdb)
 
 	// Mailer
 	mailer := mailer.NewSendgrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
@@ -95,6 +113,7 @@ func main() {
 	app := &application{
 		config:        cfg,
 		store:         storage,
+		cacheStorage:  cacheStorage,
 		logger:        logger,
 		mailer:        mailer,
 		authenticator: jwtAuthenticator,
