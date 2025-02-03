@@ -7,6 +7,7 @@ import (
 	"socialApp/internal/db"
 	"socialApp/internal/env"
 	"socialApp/internal/mailer"
+	"socialApp/internal/ratelimiter"
 	"socialApp/internal/store"
 	"socialApp/internal/store/cache"
 	"time"
@@ -66,6 +67,11 @@ func main() {
 				exp:    time.Hour * 24 * 3, // 3 days
 				iss:    "socialApp",
 			},
+		},
+		rateLimiter: ratelimiter.Config{
+			RequestsPerTimeFrame: env.GetInt("RATELIMITER_REQUESTS_COUNT", 20),
+			TimeFrame:            time.Second * 5,
+			Enabled:              env.GetBool("RATE_LIMITER_ENABLED", true),
 		},
 	}
 
