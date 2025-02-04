@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const version = "0.0.1"
+const version = ""
 
 //	@title			Social app
 //	@description	Api for social app
